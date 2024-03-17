@@ -26,12 +26,17 @@ const login = catchAsync(async (req, res) => {
   const tokens = await tokenService.generateAuthTokens(user);
 
   const data = {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    email: user.email,
-    accessToken: tokens["accessToken"],
-    refreshToken: tokens["refreshToken"]
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      image: user.image
+    },
+    tokens: {
+      accessToken: tokens["accessToken"],
+      refreshToken: tokens["refreshToken"]
+    }
   };
 
   return successResponse(res, 200, data, "Login successfully");
