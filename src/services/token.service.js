@@ -1,20 +1,23 @@
 const prisma = require("../config/prisma");
 const moment = require("moment");
 const jwt = require("jsonwebtoken");
+const tokenTypes = require("../config/token");
 
-const generateToken = (userId, expires, secret) => {
+const generateToken = (userId, expires, type, secret) => {
   const payload = {
     id: userId,
     iat: moment().unix(),
-    exp: expires.unix()
+    exp: expires.unix(),
+    type
   };
   return jwt.sign(payload, secret);
 };
 
-const saveToken = async (token, userId, expires) => {
+const saveToken = async (userId, token, expires, type) => {
   await prisma.token.upsert({
     where: {
-      userId: userId
+      userId,
+      type
     },
     update: {
       token,
@@ -23,31 +26,15 @@ const saveToken = async (token, userId, expires) => {
     create: {
       userId,
       token,
-      expires
-    }
-  });
-};
-
-const saveRefreshToken = async (token, userId, expires) => {
-  await prisma.refreshToken.upsert({
-    where: {
-      userId: userId
-    },
-    update: {
-      token,
-      expires
-    },
-    create: {
-      userId,
-      token,
-      expires
+      expires,
+      type
     }
   });
 };
 
 const verifyToken = async (token) => {
   jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-  const tokenDoc = await prisma.refreshToken.findFirst({
+  const tokenDoc = await prisma.token.findFirst({
     where: {
       token
     }
@@ -60,19 +47,22 @@ const verifyToken = async (token) => {
 
 const generateAuthTokens = async (user) => {
   const accessTokenExpires = moment().add(process.env.JWT_ACCESS_EXPIRATION_DAYS, "days");
-
-  const accessToken = generateToken(user.id, accessTokenExpires, process.env.JWT_ACCESS_SECRET);
+  const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS, process.env.JWT_ACCESS_SECRET);
 
   const refreshTokenExpires = moment().add(process.env.JWT_REFRESH_EXPIRATION_MONTHS, "months");
+  const refreshToken = generateToken(user.id, refreshTokenExpires, tokenTypes.REFRESH, process.env.JWT_REFRESH_SECRET);
 
-  const refreshToken = generateToken(user.id, refreshTokenExpires, process.env.JWT_REFRESH_SECRET);
-
-  await saveToken(accessToken, user.id, accessTokenExpires);
-  await saveRefreshToken(refreshToken, user.id, refreshTokenExpires);
+  await saveToken(user.id, refreshToken, refreshTokenExpires, tokenTypes.REFRESH);
 
   return {
-    accessToken,
-    refreshToken
+    access: {
+      token: accessToken,
+      expires: accessTokenExpires.toDate()
+    },
+    refresh: {
+      token: refreshToken,
+      expires: refreshTokenExpires.toDate()
+    }
   };
 };
 

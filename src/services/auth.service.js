@@ -50,19 +50,19 @@ const login = async (data) => {
     throw new ApiError(400, "Wrong password");
   }
 
-  return user;
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    image: user.image
+  };
 };
 
-const logout = async (userId) => {
+const logout = async (refreshToken) => {
   await prisma.token.delete({
     where: {
-      userId
-    }
-  });
-
-  await prisma.refreshToken.delete({
-    where: {
-      userId
+      token: refreshToken
     }
   });
 };

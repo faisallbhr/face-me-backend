@@ -25,25 +25,11 @@ const login = catchAsync(async (req, res) => {
   const user = await authService.login(req.body);
   const tokens = await tokenService.generateAuthTokens(user);
 
-  const data = {
-    user: {
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      image: user.image
-    },
-    tokens: {
-      accessToken: tokens["accessToken"],
-      refreshToken: tokens["refreshToken"]
-    }
-  };
-
-  return successResponse(res, 200, data, "Login successfully");
+  return successResponse(res, 200, { user, tokens }, "Login successfully");
 });
 
 const logout = catchAsync(async (req, res) => {
-  await authService.logout(req.user.sub);
+  await authService.logout(req.body.refreshToken);
   return successResponse(res, 200, null, "Logged out successfully");
 });
 
